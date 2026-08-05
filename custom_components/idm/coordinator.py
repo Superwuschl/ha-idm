@@ -1,5 +1,6 @@
 """Data coordinator for iDM integration."""
 
+import logging
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
@@ -10,6 +11,9 @@ from homeassistant.helpers.update_coordinator import (
 
 from .api import IDMApi
 from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class IDMDataUpdateCoordinator(DataUpdateCoordinator):
@@ -26,7 +30,7 @@ class IDMDataUpdateCoordinator(DataUpdateCoordinator):
 
         super().__init__(
             hass,
-            logger=None,
+            _LOGGER,
             name=DOMAIN,
             update_interval=timedelta(
                 seconds=DEFAULT_SCAN_INTERVAL
