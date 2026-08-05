@@ -35,10 +35,20 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class IDMSensor(SensorEntity):
     """Representation of an iDM sensor."""
 
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator, name, key):
+        """Initialize sensor."""
+
         self.coordinator = coordinator
-        self._attr_name = f"iDM {name}"
+        self._attr_name = name
         self._key = key
+
+    @property
+    def available(self):
+        """Return availability."""
+
+        return self.coordinator.last_update_success
 
     @property
     def native_value(self):
@@ -56,9 +66,15 @@ class IDMSensor(SensorEntity):
 
     @property
     def native_unit_of_measurement(self):
+        """Return unit."""
+
         return UnitOfTemperature.CELSIUS
 
-    async def async_update(self):
-        """Update data."""
+    async def async_added_to_hass(self):
+        """Register coordinator listener."""
 
-        await self.coordinator.async_request_refresh()
+        self.async_on_remove(
+            self.coordinator.async_add_listener(
+                self.async_write_ha_state
+            )
+        )
