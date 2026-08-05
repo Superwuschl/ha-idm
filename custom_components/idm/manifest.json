@@ -1,0 +1,10 @@
+{
+  "domain": "idm",
+  "name": "iDM myIDM",
+  "version": "0.1.0",
+  "config_flow": true,
+  "requirements": [],
+  "codeowners": [
+    "@Superwuschl"
+  ]
+}
