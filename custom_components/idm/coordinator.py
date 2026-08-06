@@ -28,7 +28,7 @@ class IDMCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name="iDM TERRA S",
-            update_interval=None,
+            update_interval=300,
         )
 
 
@@ -36,44 +36,64 @@ class IDMCoordinator(DataUpdateCoordinator):
 
         data = {}
 
+        #
+        # Hauptdaten Wärmepumpe
+        #
+
         try:
             data["heatpump"] = self.api.heatpump()
 
         except Exception as err:
             _LOGGER.error(
-                "Fehler heatpump API: %s",
+                "iDM heatpump API Fehler: %s",
                 err,
             )
 
+
+        #
+        # System Temperaturen
+        #
 
         try:
             data["graph"] = self.api.system_graph()
 
         except Exception as err:
             _LOGGER.error(
-                "Fehler graph_system API: %s",
+                "iDM graph_system Fehler: %s",
                 err,
             )
 
+
+        #
+        # Heizkreis A
+        #
 
         try:
             data["heat_a"] = self.api.heat_a_graph()
 
         except Exception as err:
             _LOGGER.error(
-                "Fehler graph_heat_a API: %s",
+                "iDM graph_heat_a Fehler: %s",
                 err,
             )
 
+
+        #
+        # Heizkreis B (optional)
+        #
 
         try:
             data["heat_b"] = self.api.heat_b_graph()
 
         except Exception as err:
-            _LOGGER.error(
-                "Fehler graph_heat_b API: %s",
+            _LOGGER.warning(
+                "iDM graph_heat_b nicht verfügbar: %s",
                 err,
             )
+
+            data["heat_b"] = {
+                "data": []
+            }
 
 
         return data
