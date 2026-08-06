@@ -13,7 +13,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class IDMApi:
-    """Client for iDM myIDM API."""
+    """Client for iDM API."""
 
     def __init__(
         self,
@@ -21,7 +21,7 @@ class IDMApi:
         password: str,
         installation: str,
     ) -> None:
-        """Initialize API."""
+        """Initialize."""
 
         self.username = username
         self.password = password
@@ -30,20 +30,24 @@ class IDMApi:
 
 
     async def login(self):
-        """Login to iDM."""
 
-        urls = [
+        """Test iDM login endpoints."""
+
+        endpoints = [
             "/api/user/login",
             "/api/auth/login",
             "/api/login",
             "/api/v1/login",
+            "/api/account/login",
+            "/rest/login",
         ]
+
 
         async with aiohttp.ClientSession() as session:
 
-            for path in urls:
+            for endpoint in endpoints:
 
-                url = f"{API_URL}{path}"
+                url = f"{API_URL}{endpoint}"
 
                 try:
 
@@ -56,67 +60,33 @@ class IDMApi:
                         ssl=False,
                     ) as response:
 
-                        text = await response.text()
+                        body = await response.text()
+
 
                         _LOGGER.warning(
-                            "iDM login test %s -> %s: %s",
-                            path,
+                            "iDM TEST %s -> %s : %s",
+                            endpoint,
                             response.status,
-                            text[:200],
+                            body[:500],
                         )
 
-                        if response.status == 200:
-
-                            data = await response.json()
-
-                            self.token = (
-                                data.get("token")
-                                or data.get("access_token")
-                            )
-
-                            if self.token:
-                                return
 
                 except Exception as err:
 
                     _LOGGER.warning(
-                        "iDM login test failed %s: %s",
-                        path,
+                        "iDM TEST %s ERROR: %s",
+                        endpoint,
                         err,
                     )
 
 
         raise Exception(
-            "No valid iDM login endpoint found"
+            "iDM API endpoint detection finished - check logs"
         )
 
 
     async def get_values(self):
-        """Get values from iDM."""
 
-        if not self.token:
-            await self.login()
+        """Get values."""
 
         return {}
-
-
-        async with aiohttp.ClientSession() as session:
-
-            async with session.get(
-                f"{API_URL}/api/installation/{self.installation}",
-                headers=headers,
-                ssl=False,
-            ) as response:
-
-                response.raise_for_status()
-
-                data = await response.json()
-
-
-                _LOGGER.warning(
-                    "iDM API response TEST: %s",
-                    data,
-                )
-
-
-                return data
