@@ -1,16 +1,18 @@
-"""iDM myIDM integration."""
+"""The iDM integration."""
+
+from __future__ import annotations
+
+import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .api import IDMApi
-from .const import DOMAIN
+from .const import DOMAIN, PLATFORMS
 from .coordinator import IDMDataUpdateCoordinator
 
 
-PLATFORMS = [
-    "sensor",
-]
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -20,8 +22,9 @@ async def async_setup_entry(
     """Set up iDM from a config entry."""
 
     api = IDMApi(
-        entry.data["username"],
-        entry.data["password"],
+        username=entry.data["username"],
+        password=entry.data["password"],
+        installation=entry.data["installation"],
     )
 
     await api.login()
@@ -52,7 +55,7 @@ async def async_unload_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
 ) -> bool:
-    """Unload iDM."""
+    """Unload iDM entry."""
 
     unload_ok = await hass.config_entries.async_unload_platforms(
         entry,
@@ -60,6 +63,8 @@ async def async_unload_entry(
     )
 
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        hass.data[DOMAIN].pop(
+            entry.entry_id,
+        )
 
     return unload_ok
