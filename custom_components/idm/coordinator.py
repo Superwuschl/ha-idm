@@ -2,20 +2,13 @@ from __future__ import annotations
 
 import logging
 
-from datetime import timedelta
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+)
 
 from homeassistant.core import HomeAssistant
 
-from homeassistant.helpers.update_coordinator import (
-    DataUpdateCoordinator,
-    UpdateFailed,
-)
-
 from .api import IDMApi
-from .const import (
-    NAME,
-    DEFAULT_SCAN_INTERVAL,
-)
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,57 +27,53 @@ class IDMCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             _LOGGER,
-            name=NAME,
-            update_interval=timedelta(
-                seconds=DEFAULT_SCAN_INTERVAL
-            ),
+            name="iDM TERRA S",
+            update_interval=None,
         )
 
 
     async def _async_update_data(self):
 
+        data = {}
+
         try:
-
-            heatpump = await self.hass.async_add_executor_job(
-                self.api.heatpump
-            )
-
-
-            graph = await self.hass.async_add_executor_job(
-                self.api.system_graph
-            )
-
-
-            heat_a = await self.hass.async_add_executor_job(
-                self.api.heat_a_graph
-            )
-
-
-            heat_b = await self.hass.async_add_executor_job(
-                self.api.heat_b_graph
-            )
-
-
-            return {
-
-                "heatpump": heatpump,
-
-                "graph": graph,
-
-                "heat_a": heat_a,
-
-                "heat_b": heat_b,
-
-            }
-
+            data["heatpump"] = self.api.heatpump()
 
         except Exception as err:
-
             _LOGGER.error(
-                "iDM Update Fehler: %s",
+                "Fehler heatpump API: %s",
                 err,
             )
 
-            raise UpdateFailed(
-                f"iDM Datenfehler: {err}"
-            ) from err
+
+        try:
+            data["graph"] = self.api.system_graph()
+
+        except Exception as err:
+            _LOGGER.error(
+                "Fehler graph_system API: %s",
+                err,
+            )
+
+
+        try:
+            data["heat_a"] = self.api.heat_a_graph()
+
+        except Exception as err:
+            _LOGGER.error(
+                "Fehler graph_heat_a API: %s",
+                err,
+            )
+
+
+        try:
+            data["heat_b"] = self.api.heat_b_graph()
+
+        except Exception as err:
+            _LOGGER.error(
+                "Fehler graph_heat_b API: %s",
+                err,
+            )
+
+
+        return data
