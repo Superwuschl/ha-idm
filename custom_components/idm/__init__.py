@@ -30,7 +30,6 @@ async def async_setup_entry(
         username=entry.data["username"],
         password=entry.data["password"],
         installation=entry.data["installation"],
-        access_token=entry.data["access_token"],
     )
 
 
@@ -49,6 +48,7 @@ async def async_setup_entry(
         await api.close()
 
         raise
+
 
 
     coordinator = IDMDataUpdateCoordinator(
@@ -74,9 +74,10 @@ async def async_setup_entry(
         raise
 
 
+
     hass.data.setdefault(
         DOMAIN,
-        {},
+        {}
     )
 
 
@@ -92,8 +93,8 @@ async def async_setup_entry(
     )
 
 
-    _LOGGER.debug(
-        "iDM integration successfully loaded"
+    _LOGGER.info(
+        "iDM integration loaded successfully"
     )
 
 
@@ -123,11 +124,7 @@ async def async_unload_entry(
 
         if data:
 
-            api = data.get("api")
-
-            if api:
-
-                await api.close()
+            await data["api"].close()
 
 
         _LOGGER.debug(
