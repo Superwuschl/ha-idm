@@ -1,27 +1,39 @@
-"""API client for iDM myIDM."""
+"""API client for the iDM myIDM cloud."""
+
+from __future__ import annotations
 
 import hashlib
+import logging
+
 import aiohttp
 
 from .const import API_URL
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class IDMApi:
-    """Client for the iDM myIDM API."""
+    """API client for iDM myIDM."""
 
-    def __init__(self, username: str, password: str):
-        """Initialize API client."""
-        self.username = username
-        self.password = password
-        self.token = None
-        self.installation = None
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        installation: str,
+    ) -> None:
+        """Initialize API."""
 
+        self._username = username
+        self._password = password
+        self._installation = installation
 
-    async def login(self) -> bool:
-        """Login to myIDM and get token."""
+        self._token: str | None = None
+
+    async def login(self) -> None:
+        """Login to myIDM."""
 
         password_hash = hashlib.sha1(
-            self.password.encode("utf-8")
+            self._password.encode("utf-8")
         ).hexdigest()
 
         async with aiohttp.ClientSession(
@@ -33,29 +45,28 @@ class IDMApi:
             async with session.post(
                 f"{API_URL}/api/user/login",
                 data={
-                    "username": self.username,
+                    "username": self._username,
                     "password": password_hash,
                 },
                 ssl=False,
             ) as response:
 
+                response.raise_for_status()
+
                 data = await response.json()
 
-                self.token = data.get("token")
+                token = data.get("token")
 
-                installations = data.get("installations", [])
+                if not token:
+                    raise RuntimeError("Login failed")
 
-                if installations:
-                    self.installation = installations[0]["id"]
-
-                return self.token is not None
-
+                self._token = token
 
     async def get_values(self) -> dict:
-        """Read current values from heat pump."""
+        """Return installation values."""
 
-        if not self.token or not self.installation:
-            raise Exception("Not logged in")
+        if self._token is None:
+            await self.login()
 
         async with aiohttp.ClientSession(
             headers={
@@ -66,10 +77,12 @@ class IDMApi:
             async with session.post(
                 f"{API_URL}/api/installation/values",
                 data={
-                    "token": self.token,
-                    "installation": self.installation,
+                    "token": self._token,
+                    "installation": self._installation,
                 },
                 ssl=False,
             ) as response:
+
+                response.raise_for_status()
 
                 return await response.json()
