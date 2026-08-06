@@ -19,26 +19,35 @@ async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
 ) -> bool:
-    """Set up iDM from a config entry."""
+    """Set up iDM from config entry."""
 
     _LOGGER.debug(
         "Setting up iDM integration"
     )
 
+
     api = IDMApi(
         username=entry.data["username"],
         password=entry.data["password"],
         installation=entry.data["installation"],
+        access_token=entry.data["access_token"],
     )
 
+
     try:
+
         await api.login()
 
+
     except Exception as err:
+
         _LOGGER.error(
             "iDM login failed: %s",
             err,
         )
+
+        await api.close()
+
         raise
 
 
@@ -47,14 +56,21 @@ async def async_setup_entry(
         api,
     )
 
+
     try:
+
         await coordinator.async_config_entry_first_refresh()
 
+
     except Exception as err:
+
         _LOGGER.error(
             "Unable to fetch iDM data: %s",
             err,
         )
+
+        await api.close()
+
         raise
 
 
@@ -62,6 +78,7 @@ async def async_setup_entry(
         DOMAIN,
         {},
     )
+
 
     hass.data[DOMAIN][entry.entry_id] = {
         "api": api,
@@ -74,9 +91,11 @@ async def async_setup_entry(
         PLATFORMS,
     )
 
+
     _LOGGER.debug(
         "iDM integration successfully loaded"
     )
+
 
     return True
 
@@ -93,15 +112,27 @@ async def async_unload_entry(
         PLATFORMS,
     )
 
+
     if unload_ok:
 
-        hass.data[DOMAIN].pop(
+        data = hass.data[DOMAIN].pop(
             entry.entry_id,
             None,
         )
 
+
+        if data:
+
+            api = data.get("api")
+
+            if api:
+
+                await api.close()
+
+
         _LOGGER.debug(
             "iDM integration unloaded"
         )
+
 
     return unload_ok
