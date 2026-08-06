@@ -5,6 +5,7 @@ import logging
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
+
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -45,14 +46,23 @@ class IDMCoordinator(DataUpdateCoordinator):
                 self.api.heatpump
             )
 
+
             graph = await self.hass.async_add_executor_job(
                 self.api.system_graph
             )
 
+
+            heat_a = await self.hass.async_add_executor_job(
+                self.api.heat_a_graph
+            )
+
+
             return {
                 "heatpump": heatpump,
                 "graph": graph,
+                "heat_a": heat_a,
             }
+
 
         except Exception as err:
 
