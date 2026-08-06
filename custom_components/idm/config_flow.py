@@ -1,25 +1,16 @@
-"""Config flow for iDM integration."""
-
 from __future__ import annotations
-
-import logging
 
 import voluptuous as vol
 
 from homeassistant import config_entries
 
-from .api import IDMApi
-from .const import DOMAIN
-
-
-_LOGGER = logging.getLogger(__name__)
+from .const import DOMAIN, NAME
 
 
 class IDMConfigFlow(
     config_entries.ConfigFlow,
     domain=DOMAIN,
 ):
-    """Handle a config flow for iDM."""
 
     VERSION = 1
 
@@ -28,73 +19,40 @@ class IDMConfigFlow(
         self,
         user_input=None,
     ):
-        """Handle user setup."""
 
-        errors = {}
+        if user_input:
 
+            return self.async_create_entry(
+                title=NAME,
+                data={
+                    "access_token":
+                        user_input["access_token"],
 
-        if user_input is not None:
+                    "refresh_token":
+                        user_input["refresh_token"],
 
-            api = IDMApi(
-                username=user_input["username"],
-                password=user_input["password"],
-                installation=user_input["installation"],
+                    "wp_id":
+                        int(
+                            user_input["wp_id"]
+                        ),
+                },
             )
-
-
-            try:
-
-                await api.login()
-
-
-            except Exception as err:
-
-                _LOGGER.exception(
-                    "iDM config flow login failed: %s",
-                    err,
-                )
-
-                errors["base"] = "cannot_connect"
-
-
-            else:
-
-                await api.close()
-
-
-                await self.async_set_unique_id(
-                    f"idm_{user_input['installation']}"
-                )
-
-
-                self._abort_if_unique_id_configured()
-
-
-                return self.async_create_entry(
-                    title="iDM myIDM",
-                    data=user_input,
-                )
-
-
-            finally:
-
-                await api.close()
-
 
 
         schema = vol.Schema(
             {
                 vol.Required(
-                    "username"
+                    "access_token"
                 ): str,
 
                 vol.Required(
-                    "password"
+                    "refresh_token"
                 ): str,
 
                 vol.Required(
-                    "installation"
-                ): str,
+                    "wp_id",
+                    default=3419,
+                ): int,
             }
         )
 
@@ -102,5 +60,4 @@ class IDMConfigFlow(
         return self.async_show_form(
             step_id="user",
             data_schema=schema,
-            errors=errors,
         )

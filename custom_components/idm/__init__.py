@@ -1,100 +1,55 @@
-"""The iDM integration."""
-
 from __future__ import annotations
-
-import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .api import IDMApi
-from .const import DOMAIN, PLATFORMS
-from .coordinator import IDMDataUpdateCoordinator
+from .coordinator import IDMCoordinator
+
+from .const import DOMAIN
 
 
-_LOGGER = logging.getLogger(__name__)
+PLATFORMS = [
+    "sensor",
+]
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-) -> bool:
-    """Set up iDM from config entry."""
+):
 
-    _LOGGER.debug(
-        "Setting up iDM integration"
+    access_token = entry.data["access_token"]
+
+    refresh_token = entry.data.get(
+        "refresh_token"
     )
+
+    wp_id = entry.data["wp_id"]
 
 
     api = IDMApi(
-        username=entry.data["username"],
-        password=entry.data["password"],
-        installation=entry.data["installation"],
+        access_token,
+        refresh_token,
+        wp_id,
     )
 
 
-    try:
-
-        await api.login()
-
-
-    except Exception as err:
-
-        _LOGGER.error(
-            "iDM login failed: %s",
-            err,
-        )
-
-        await api.close()
-
-        raise
-
-
-
-    coordinator = IDMDataUpdateCoordinator(
+    coordinator = IDMCoordinator(
         hass,
         api,
     )
 
 
-    try:
-
-        await coordinator.async_config_entry_first_refresh()
+    await coordinator.async_config_entry_first_refresh()
 
 
-    except Exception as err:
-
-        _LOGGER.error(
-            "Unable to fetch iDM data: %s",
-            err,
-        )
-
-        await api.close()
-
-        raise
-
-
-
-    hass.data.setdefault(
-        DOMAIN,
-        {}
-    )
-
-
-    hass.data[DOMAIN][entry.entry_id] = {
-        "api": api,
-        "coordinator": coordinator,
-    }
+    entry.runtime_data = coordinator
 
 
     await hass.config_entries.async_forward_entry_setups(
         entry,
         PLATFORMS,
-    )
-
-
-    _LOGGER.info(
-        "iDM integration loaded successfully"
     )
 
 
@@ -105,31 +60,9 @@ async def async_setup_entry(
 async def async_unload_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
-) -> bool:
-    """Unload iDM entry."""
+):
 
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    return await hass.config_entries.async_unload_platforms(
         entry,
         PLATFORMS,
     )
-
-
-    if unload_ok:
-
-        data = hass.data[DOMAIN].pop(
-            entry.entry_id,
-            None,
-        )
-
-
-        if data:
-
-            await data["api"].close()
-
-
-        _LOGGER.debug(
-            "iDM integration unloaded"
-        )
-
-
-    return unload_ok

@@ -1,29 +1,11 @@
-"""Constants for the iDM integration."""
-
-from __future__ import annotations
-
-
 DOMAIN = "idm"
 
 NAME = "iDM myIDM"
 
 MANUFACTURER = "iDM"
 
-MODEL = "myIDM"
-
+MODEL = "TERRA S"
 
 API_URL = "https://a.myidm.at"
 
-
-DEFAULT_SCAN_INTERVAL = 60
-
-
-PLATFORMS = [
-    "sensor",
-]
-
-
-CONF_INSTALLATION = "installation"
-
-
-DEVICE_IDENTIFIER = "idm_device"
+DEFAULT_SCAN_INTERVAL = 900

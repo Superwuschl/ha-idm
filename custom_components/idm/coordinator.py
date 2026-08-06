@@ -1,9 +1,8 @@
-""""Data coordinator for iDM integration."""
-
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
+
+from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (
@@ -12,40 +11,51 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import IDMApi
-from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
+from .const import NAME, DEFAULT_SCAN_INTERVAL
 
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class IDMDataUpdateCoordinator(DataUpdateCoordinator):
-    """Manage iDM data updates."""
+class IDMCoordinator(DataUpdateCoordinator):
 
     def __init__(
         self,
         hass: HomeAssistant,
         api: IDMApi,
-    ) -> None:
-        """Initialize coordinator."""
+    ):
 
         self.api = api
 
         super().__init__(
             hass,
             _LOGGER,
-            name=DOMAIN,
+            name=NAME,
             update_interval=timedelta(
                 seconds=DEFAULT_SCAN_INTERVAL
             ),
         )
 
-    async def _async_update_data(self) -> dict:
-        """Fetch data from iDM."""
+
+    async def _async_update_data(self):
 
         try:
-            return await self.api.get_values()
+
+            heatpump = await self.hass.async_add_executor_job(
+                self.api.heatpump
+            )
+
+            graph = await self.hass.async_add_executor_job(
+                self.api.system_graph
+            )
+
+            return {
+                "heatpump": heatpump,
+                "graph": graph,
+            }
 
         except Exception as err:
+
             raise UpdateFailed(
-                f"Error communicating with iDM: {err}"
+                f"iDM Datenfehler: {err}"
             ) from err

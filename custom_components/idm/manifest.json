@@ -1,13 +1,10 @@
 {
   "domain": "idm",
   "name": "iDM myIDM",
-  "version": "0.1.0",
-  "documentation": "https://github.com/Superwuschl/ha-idm",
-  "issue_tracker": "https://github.com/Superwuschl/ha-idm/issues",
-  "requirements": [],
-  "codeowners": [
-    "@Superwuschl"
-  ],
+  "version": "1.0.0",
+  "documentation": "https://www.idm-energie.at",
   "config_flow": true,
-  "iot_class": "cloud_polling"
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": []
 }

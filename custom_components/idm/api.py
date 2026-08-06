@@ -1,207 +1,121 @@
-"""API client for iDM integration."""
-
 from __future__ import annotations
 
-import logging
-
-import aiohttp
-
-from .const import API_URL
+import requests
 
 
-_LOGGER = logging.getLogger(__name__)
+BASE_URL = "https://a.myidm.at"
 
 
 class IDMApi:
-    """Client for iDM API."""
 
     def __init__(
         self,
-        username: str,
-        password: str,
-        installation: str,
-    ) -> None:
-        """Initialize."""
-
-        self.username = username
-        self.password = password
-        self.installation = installation
-
-        self.token = None
-        self.session = None
-
-
-    async def _get_session(self):
-        """Get aiohttp session."""
-
-        if self.session is None:
-            self.session = aiohttp.ClientSession()
-
-        return self.session
-
-
-    async def login(self):
-        """Login using iDM OAuth2."""
-
-        session = await self._get_session()
-
-
-        url = (
-            f"{API_URL}/api/v1/oauth2/token/"
-        )
-
-
-        payload = {
-            "username": self.username,
-            "password": self.password,
-            "grant_type": "password",
-        }
-
-
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
-
-
-        async with session.post(
-            url,
-            data=payload,
-            headers=headers,
-            ssl=False,
-        ) as response:
-
-            try:
-                data = await response.json()
-
-            except Exception:
-
-                data = await response.text()
-
-
-            _LOGGER.debug(
-                "iDM OAuth response %s: %s",
-                response.status,
-                data,
-            )
-
-
-            if response.status != 200:
-
-                raise Exception(
-                    f"OAuth login failed {response.status}: {data}"
-                )
-
-
-            self.token = data.get(
-                "access_token"
-            )
-
-
-            if not self.token:
-
-                raise Exception(
-                    "No access_token returned"
-                )
-
-
-            _LOGGER.info(
-                "iDM OAuth login successful"
-            )
-
-
-
-    async def _request(
-        self,
-        endpoint: str,
+        access_token: str,
+        refresh_token: str,
+        wp_id: int,
     ):
-        """Send authenticated request."""
 
-        session = await self._get_session()
+        self.access_token = access_token
+        self.refresh_token = refresh_token
+        self.wp_id = wp_id
 
 
-        headers = {
-            "Authorization": f"Bearer {self.token}",
-            "Content-Type": "application/json",
-            "Origin": "https://app.myidm.at",
+    def _headers(self):
+
+        return {
+            "Authorization":
+                f"Access-Token {self.access_token}",
+            "Accept":
+                "application/json, text/plain, */*",
+            "Origin":
+                "https://app.myidm.at",
+            "Referer":
+                "https://app.myidm.at/",
         }
 
 
+    def refresh(self):
+
         url = (
-            f"{API_URL}/api/v1{endpoint}"
+            BASE_URL
+            + "/api/v1/oauth2/token/"
         )
 
 
-        async with session.get(
+        data = {
+            "refresh_token":
+                self.refresh_token,
+            "grant_type":
+                "refresh_token",
+        }
+
+
+        response = requests.post(
             url,
-            headers=headers,
-            ssl=False,
-        ) as response:
-
-            response.raise_for_status()
-
-            return await response.json()
-
-
-
-    async def get_system_graph(self):
-        """Get system temperature graph."""
-
-        return await self._request(
-            f"/heatpumps/{self.installation}/diagrams/graph_system/?period=24h"
+            data=data,
+            timeout=20,
         )
 
 
-
-    async def get_values(self):
-        """Get current values."""
-
-        data = await self.get_system_graph()
+        response.raise_for_status()
 
 
-        result = {}
+        token = response.json()
 
 
-        labels = data.get(
-            "channel_labels",
-            {},
+        self.access_token = (
+            token["access_token"]
         )
 
 
-        points = data.get(
-            "data",
-            [],
-        )
-
-
-        if not points:
-
-            return result
-
-
-        latest = points[-1]
-
-
-        for channel, name in labels.items():
-
-            value = latest.get(
-                str(channel)
+        if "refresh_token" in token:
+            self.refresh_token = (
+                token["refresh_token"]
             )
 
 
-            if value is not None:
-
-                result[name] = value
-
-
-        return result
+        return token
 
 
 
-    async def close(self):
-        """Close HTTP session."""
+    def get(self, endpoint):
 
-        if self.session:
+        url = BASE_URL + endpoint
 
-            await self.session.close()
 
-            self.session = None
+        response = requests.get(
+            url,
+            headers=self._headers(),
+            timeout=20,
+        )
+
+
+        if response.status_code == 401:
+
+            self.refresh()
+
+            response = requests.get(
+                url,
+                headers=self._headers(),
+                timeout=20,
+            )
+
+
+        response.raise_for_status()
+
+        return response.json()
+
+
+
+    def heatpump(self):
+
+        return self.get(
+            f"/api/v1/heatpumps/{self.wp_id}/"
+        )
+
+
+    def system_graph(self):
+
+        return self.get(
+            f"/api/v1/heatpumps/{self.wp_id}/diagrams/graph_system/?period=24h"
+        )
