@@ -59,8 +59,27 @@ async def async_setup_entry(
 
     entities = []
 
+    graph = coordinator.data.get(
+        "graph",
+        {}
+    )
+
+    data = graph.get(
+        "data",
+        []
+    )
+
+    latest_data = {}
+
+    if data:
+        latest_data = data[-1]
+
 
     for channel, values in CHANNELS.items():
+
+        # Sensor nur anlegen, wenn die API diesen Kanal liefert
+        if channel not in latest_data:
+            continue
 
         entities.append(
             IDMTemperatureSensor(
