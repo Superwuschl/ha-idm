@@ -38,6 +38,26 @@ CHANNELS = {
 }
 
 
+HEAT_CIRCUIT_A_CHANNELS = {
+    "9": (
+        "Heizkreis A Vorlauf",
+        "°C",
+    ),
+    "99": (
+        "Heizkreis A Soll Vorlauf",
+        "°C",
+    ),
+    "16": (
+        "Raumtemperatur",
+        "°C",
+    ),
+    "106": (
+        "Soll Raumtemperatur",
+        "°C",
+    ),
+}
+
+
 DEVICE_INFO = {
     "identifiers": {
         ("idm", "3419")
@@ -59,6 +79,11 @@ async def async_setup_entry(
 
     entities = []
 
+
+    #
+    # Systemtemperaturen
+    #
+
     graph = coordinator.data.get(
         "graph",
         {}
@@ -77,7 +102,6 @@ async def async_setup_entry(
 
     for channel, values in CHANNELS.items():
 
-        # Sensor nur anlegen, wenn die API diesen Kanal liefert
         if channel not in latest_data:
             continue
 
@@ -87,9 +111,50 @@ async def async_setup_entry(
                 channel,
                 values[0],
                 values[1],
+                "system",
             )
         )
 
+
+    #
+    # Heizkreis A
+    #
+
+    heat_a = coordinator.data.get(
+        "heat_a",
+        {}
+    )
+
+    heat_a_data = heat_a.get(
+        "data",
+        []
+    )
+
+    latest_heat_a = {}
+
+    if heat_a_data:
+        latest_heat_a = heat_a_data[-1]
+
+
+    for channel, values in HEAT_CIRCUIT_A_CHANNELS.items():
+
+        if channel not in latest_heat_a:
+            continue
+
+        entities.append(
+            IDMTemperatureSensor(
+                coordinator,
+                channel,
+                values[0],
+                values[1],
+                "heat_a",
+            )
+        )
+
+
+    #
+    # Infos
+    #
 
     entities.extend(
         [
@@ -129,6 +194,7 @@ class IDMTemperatureSensor(
         channel,
         name,
         unit,
+        source,
     ):
 
         super().__init__(
@@ -136,9 +202,10 @@ class IDMTemperatureSensor(
         )
 
         self.channel = channel
+        self.source = source
 
         self._attr_unique_id = (
-            f"idm_3419_temperature_{channel}"
+            f"idm_3419_{source}_{channel}"
         )
 
         self._attr_name = (
@@ -158,15 +225,26 @@ class IDMTemperatureSensor(
     @property
     def native_value(self):
 
-        graph = self.coordinator.data.get(
-            "graph",
-            {}
-        )
+        if self.source == "heat_a":
+
+            graph = self.coordinator.data.get(
+                "heat_a",
+                {}
+            )
+
+        else:
+
+            graph = self.coordinator.data.get(
+                "graph",
+                {}
+            )
+
 
         data = graph.get(
             "data",
             []
         )
+
 
         if not data:
             return None
