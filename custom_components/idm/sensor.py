@@ -148,7 +148,6 @@ class IDMGraphSensor(
         self.channel = channel
 
         self._attr_unique_id = unique_id
-
         self._attr_name = name
 
         self._attr_device_info = DEVICE_INFO
@@ -219,7 +218,6 @@ class IDMInfoSensor(
         self._attr_name = name
 
         self._attr_device_info = DEVICE_INFO
-
 
 
     @property
