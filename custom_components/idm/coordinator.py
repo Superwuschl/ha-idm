@@ -12,7 +12,10 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import IDMApi
-from .const import NAME, DEFAULT_SCAN_INTERVAL
+from .const import (
+    NAME,
+    DEFAULT_SCAN_INTERVAL,
+)
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -57,14 +60,30 @@ class IDMCoordinator(DataUpdateCoordinator):
             )
 
 
+            heat_b = await self.hass.async_add_executor_job(
+                self.api.heat_b_graph
+            )
+
+
             return {
+
                 "heatpump": heatpump,
+
                 "graph": graph,
+
                 "heat_a": heat_a,
+
+                "heat_b": heat_b,
+
             }
 
 
         except Exception as err:
+
+            _LOGGER.error(
+                "iDM Update Fehler: %s",
+                err,
+            )
 
             raise UpdateFailed(
                 f"iDM Datenfehler: {err}"
