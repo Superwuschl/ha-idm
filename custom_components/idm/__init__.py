@@ -21,34 +21,65 @@ async def async_setup_entry(
 ) -> bool:
     """Set up iDM from a config entry."""
 
+    _LOGGER.debug(
+        "Setting up iDM integration"
+    )
+
     api = IDMApi(
         username=entry.data["username"],
         password=entry.data["password"],
         installation=entry.data["installation"],
     )
 
-    await api.login()
+    try:
+        await api.login()
+
+    except Exception as err:
+        _LOGGER.error(
+            "iDM login failed: %s",
+            err,
+        )
+        raise
+
 
     coordinator = IDMDataUpdateCoordinator(
         hass,
         api,
     )
 
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await coordinator.async_config_entry_first_refresh()
 
-    hass.data.setdefault(DOMAIN, {})
+    except Exception as err:
+        _LOGGER.error(
+            "Unable to fetch iDM data: %s",
+            err,
+        )
+        raise
+
+
+    hass.data.setdefault(
+        DOMAIN,
+        {},
+    )
 
     hass.data[DOMAIN][entry.entry_id] = {
         "api": api,
         "coordinator": coordinator,
     }
 
+
     await hass.config_entries.async_forward_entry_setups(
         entry,
         PLATFORMS,
     )
 
+    _LOGGER.debug(
+        "iDM integration successfully loaded"
+    )
+
     return True
+
 
 
 async def async_unload_entry(
@@ -63,8 +94,14 @@ async def async_unload_entry(
     )
 
     if unload_ok:
+
         hass.data[DOMAIN].pop(
             entry.entry_id,
+            None,
+        )
+
+        _LOGGER.debug(
+            "iDM integration unloaded"
         )
 
     return unload_ok
