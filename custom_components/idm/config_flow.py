@@ -7,10 +7,14 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 
+from .api import IDMApi
 from .const import DOMAIN
 
 
-class IDMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class IDMConfigFlow(
+    config_entries.ConfigFlow,
+    domain=DOMAIN,
+):
     """Handle a config flow for iDM."""
 
     VERSION = 1
@@ -19,21 +23,36 @@ class IDMConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         user_input=None,
     ):
-        """Handle the initial setup."""
+        """Handle user setup."""
 
         errors = {}
 
         if user_input is not None:
-            await self.async_set_unique_id(
-                f"idm_{user_input['installation']}"
-            )
 
-            self._abort_if_unique_id_configured()
+            try:
+                api = IDMApi(
+                    username=user_input["username"],
+                    password=user_input["password"],
+                    installation=user_input["installation"],
+                )
 
-            return self.async_create_entry(
-                title="iDM myIDM",
-                data=user_input,
-            )
+                await api.login()
+
+            except Exception:
+                errors["base"] = "cannot_connect"
+
+            else:
+
+                await self.async_set_unique_id(
+                    f"idm_{user_input['installation']}"
+                )
+
+                self._abort_if_unique_id_configured()
+
+                return self.async_create_entry(
+                    title="iDM myIDM",
+                    data=user_input,
+                )
 
         schema = vol.Schema(
             {
