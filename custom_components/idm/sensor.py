@@ -10,7 +10,7 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 
-CHANNELS = {
+SYSTEM_CHANNELS = {
     "1": (
         "Außentemperatur",
         "°C",
@@ -69,7 +69,6 @@ DEVICE_INFO = {
 }
 
 
-
 async def async_setup_entry(
     hass,
     config_entry,
@@ -85,48 +84,47 @@ async def async_setup_entry(
     # System Temperaturen
     #
 
-    graph = coordinator.data.get(
+    system_graph = coordinator.data.get(
         "graph",
         {}
     )
 
-    data = graph.get(
+    system_data = system_graph.get(
         "data",
         []
     )
 
-    latest_data = {}
+    latest_system = {}
 
-    if data:
-        latest_data = data[-1]
+    if system_data:
+        latest_system = system_data[-1]
 
 
-    for channel, values in CHANNELS.items():
+    for channel, values in SYSTEM_CHANNELS.items():
 
-        if channel not in latest_data:
-            continue
+        if channel in latest_system:
 
-        entities.append(
-            IDMTemperatureSensor(
-                coordinator,
-                channel,
-                values[0],
-                values[1],
-                "system",
+            entities.append(
+                IDMTemperatureSensor(
+                    coordinator,
+                    channel,
+                    values[0],
+                    values[1],
+                    "graph",
+                )
             )
-        )
 
 
     #
     # Heizkreis A
     #
 
-    heat_a = coordinator.data.get(
+    heat_a_graph = coordinator.data.get(
         "heat_a",
         {}
     )
 
-    heat_a_data = heat_a.get(
+    heat_a_data = heat_a_graph.get(
         "data",
         []
     )
@@ -139,18 +137,17 @@ async def async_setup_entry(
 
     for channel, values in HEAT_A_CHANNELS.items():
 
-        if channel not in latest_heat_a:
-            continue
+        if channel in latest_heat_a:
 
-        entities.append(
-            IDMTemperatureSensor(
-                coordinator,
-                channel,
-                values[0],
-                values[1],
-                "heat_a",
+            entities.append(
+                IDMTemperatureSensor(
+                    coordinator,
+                    channel,
+                    values[0],
+                    values[1],
+                    "heat_a",
+                )
             )
-        )
 
 
     #
@@ -205,19 +202,24 @@ class IDMTemperatureSensor(
         self.channel = channel
         self.source = source
 
+
         self._attr_unique_id = (
-            f"idm_3419_{source}_temperature_{channel}"
+            f"idm_3419_{source}_{channel}"
         )
+
 
         self._attr_name = (
             f"iDM {name}"
         )
 
+
         self._attr_native_unit_of_measurement = unit
+
 
         self._attr_device_class = (
             SensorDeviceClass.TEMPERATURE
         )
+
 
         self._attr_device_info = DEVICE_INFO
 
@@ -226,22 +228,13 @@ class IDMTemperatureSensor(
     @property
     def native_value(self):
 
-        if self.source == "system":
-
-            data_source = self.coordinator.data.get(
-                "graph",
-                {}
-            )
-
-        else:
-
-            data_source = self.coordinator.data.get(
-                self.source,
-                {}
-            )
+        source_data = self.coordinator.data.get(
+            self.source,
+            {}
+        )
 
 
-        data = data_source.get(
+        data = source_data.get(
             "data",
             []
         )
@@ -283,15 +276,19 @@ class IDMInfoSensor(
             coordinator
         )
 
+
         self.key = key
+
 
         self._attr_unique_id = (
             f"idm_3419_info_{key}"
         )
 
+
         self._attr_name = (
             f"iDM {name}"
         )
+
 
         self._attr_device_info = DEVICE_INFO
 
@@ -304,6 +301,7 @@ class IDMInfoSensor(
             "heatpump",
             {}
         )
+
 
         return heatpump.get(
             self.key
