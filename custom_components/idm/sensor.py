@@ -4,38 +4,10 @@ from __future__ import annotations
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import UnitOfTemperature
-from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
 from .entity import IDMEntity
-
-
-SENSORS = {
-    "Außentemperatur": {
-        "key": "temp_outside",
-        "icon": "mdi:thermometer",
-    },
-    "Hygienetemperatur": {
-        "key": "temp_hygienic",
-        "icon": "mdi:water-thermometer",
-    },
-    "Wärmepumpe Temperatur": {
-        "key": "temp_heat",
-        "icon": "mdi:heat-pump",
-    },
-    "Heizkreis Vorlauf": {
-        "key": "circuits.0.temp_forerun_actual",
-        "icon": "mdi:thermometer-chevron-up",
-    },
-    "Heizkreis Soll Normal": {
-        "key": "circuits.0.temp_params_normal.value",
-        "icon": "mdi:thermometer-check",
-    },
-    "Heizkreis Soll Eco": {
-        "key": "circuits.0.temp_params_eco.value",
-        "icon": "mdi:leaf-thermometer",
-    },
-}
+from .sensor_descriptions import SENSOR_DESCRIPTIONS
 
 
 async def async_setup_entry(
@@ -49,17 +21,17 @@ async def async_setup_entry(
 
     entities = []
 
-    for name, config in SENSORS.items():
+    for description in SENSOR_DESCRIPTIONS:
+
         entities.append(
             IDMSensor(
                 coordinator,
-                name,
-                config["key"],
-                config["icon"],
+                description,
             )
         )
 
     async_add_entities(entities)
+
 
 
 class IDMSensor(IDMEntity, SensorEntity):
@@ -68,23 +40,30 @@ class IDMSensor(IDMEntity, SensorEntity):
     _attr_has_entity_name = True
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
 
+
     def __init__(
         self,
         coordinator,
-        name,
-        key,
-        icon,
+        description,
     ):
         """Initialize sensor."""
 
         super().__init__(
             coordinator,
-            key,
+            description.key,
         )
 
-        self._attr_name = name
-        self._attr_unique_id = f"idm_{key}"
-        self._attr_icon = icon
+        self.entity_description = description
+
+        self._attr_name = description.name
+
+        self._attr_unique_id = (
+            f"idm_{description.key}"
+        )
+
+        self._attr_icon = description.icon
+
+
 
     @property
     def native_value(self):
@@ -95,26 +74,39 @@ class IDMSensor(IDMEntity, SensorEntity):
         for part in self._key.split("."):
 
             if isinstance(value, list):
+
                 value = value[int(part)]
 
             elif isinstance(value, dict):
+
                 value = value.get(part)
 
             else:
+
                 value = None
                 break
+
 
         if value is None:
             return None
 
+
         if isinstance(value, str):
-            value = value.replace(
-                "°C",
-                "",
-            ).strip()
+
+            value = (
+                value
+                .replace("°C", "")
+                .strip()
+            )
+
 
         try:
+
             return float(value)
 
-        except (ValueError, TypeError):
+        except (
+            ValueError,
+            TypeError,
+        ):
+
             return value
