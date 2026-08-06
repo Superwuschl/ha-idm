@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import logging
+
 import voluptuous as vol
 
 from homeassistant import config_entries
 
 from .api import IDMApi
 from .const import DOMAIN
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class IDMConfigFlow(
@@ -44,7 +49,13 @@ class IDMConfigFlow(
 
             except Exception as err:
 
+                _LOGGER.exception(
+                    "iDM config flow login failed: %s",
+                    err,
+                )
+
                 errors["base"] = "cannot_connect"
+
 
             else:
 
@@ -77,11 +88,9 @@ class IDMConfigFlow(
                     "username"
                 ): str,
 
-
                 vol.Required(
                     "password"
                 ): str,
-
 
                 vol.Required(
                     "installation"
