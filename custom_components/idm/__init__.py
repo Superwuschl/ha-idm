@@ -29,6 +29,7 @@ async def async_setup_entry(
 
 
     api = IDMApi(
+        hass,
         access_token,
         refresh_token,
         wp_id,

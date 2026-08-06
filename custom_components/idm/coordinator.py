@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+
 from datetime import timedelta
 
 from homeassistant.helpers.update_coordinator import (
@@ -37,12 +38,9 @@ class IDMCoordinator(DataUpdateCoordinator):
 
         data = {}
 
-        #
-        # Hauptdaten Wärmepumpe
-        #
 
         try:
-            data["heatpump"] = self.api.heatpump()
+            data["heatpump"] = await self.api.heatpump()
 
         except Exception as err:
             _LOGGER.error(
@@ -51,12 +49,8 @@ class IDMCoordinator(DataUpdateCoordinator):
             )
 
 
-        #
-        # System Temperaturen
-        #
-
         try:
-            data["graph"] = self.api.system_graph()
+            data["graph"] = await self.api.system_graph()
 
         except Exception as err:
             _LOGGER.error(
@@ -65,12 +59,8 @@ class IDMCoordinator(DataUpdateCoordinator):
             )
 
 
-        #
-        # Heizkreis A
-        #
-
         try:
-            data["heat_a"] = self.api.heat_a_graph()
+            data["heat_a"] = await self.api.heat_a_graph()
 
         except Exception as err:
             _LOGGER.error(
@@ -79,14 +69,11 @@ class IDMCoordinator(DataUpdateCoordinator):
             )
 
 
-        #
-        # Heizkreis B (optional)
-        #
-
         try:
-            data["heat_b"] = self.api.heat_b_graph()
+            data["heat_b"] = await self.api.heat_b_graph()
 
         except Exception as err:
+
             _LOGGER.warning(
                 "iDM graph_heat_b nicht verfügbar: %s",
                 err,
