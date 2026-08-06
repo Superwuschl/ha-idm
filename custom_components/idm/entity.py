@@ -7,6 +7,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import (
     DOMAIN,
     MANUFACTURER,
+    MODEL,
     DEVICE_IDENTIFIER,
 )
 
@@ -31,9 +32,12 @@ class IDMEntity(CoordinatorEntity):
 
         return {
             "identifiers": {
-                (DOMAIN, DEVICE_IDENTIFIER)
+                (
+                    DOMAIN,
+                    DEVICE_IDENTIFIER,
+                )
             },
             "name": "iDM Wärmepumpe",
             "manufacturer": MANUFACTURER,
-            "model": "myIDM",
+            "model": MODEL,
         }
