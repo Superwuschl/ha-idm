@@ -32,7 +32,6 @@ class IDMApi:
 
 
     async def _get_session(self):
-        """Return HTTP session."""
 
         if self.session is None:
             self.session = aiohttp.ClientSession()
@@ -41,9 +40,10 @@ class IDMApi:
 
 
     async def login(self):
-        """Get OAuth2 access token."""
+        """Login using OAuth2."""
 
         session = await self._get_session()
+
 
         url = (
             f"{API_URL}/oauth2/token/"
@@ -58,65 +58,54 @@ class IDMApi:
 
 
         headers = {
-            "Content-Type": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
         }
 
 
-        try:
-
-            async with session.post(
-                url,
-                json=payload,
-                headers=headers,
-                ssl=False,
-            ) as response:
+        async with session.post(
+            url,
+            data=payload,
+            headers=headers,
+            ssl=False,
+        ) as response:
 
 
-                try:
+            try:
+                data = await response.json()
 
-                    data = await response.json()
-
-                except Exception:
-
-                    data = await response.text()
+            except Exception:
+                data = await response.text()
 
 
-                _LOGGER.error(
-                    "iDM OAuth response %s: %s",
-                    response.status,
-                    data,
+            _LOGGER.debug(
+                "iDM OAuth response %s: %s",
+                response.status,
+                data,
+            )
+
+
+            if response.status != 200:
+
+                raise Exception(
+                    f"OAuth login failed {response.status}: {data}"
                 )
 
 
-                if response.status != 200:
-
-                    raise Exception(
-                        f"OAuth login failed {response.status}: {data}"
-                    )
+            self.token = data.get(
+                "access_token"
+            )
 
 
-                self.token = data.get(
-                    "access_token"
+            if not self.token:
+
+                raise Exception(
+                    "No access_token returned"
                 )
 
 
-                if not self.token:
-
-                    raise Exception(
-                        "No access_token returned"
-                    )
-
-
-                _LOGGER.info(
-                    "iDM OAuth login successful"
-                )
-
-
-        except Exception:
-
-            await self.close()
-
-            raise
+            _LOGGER.info(
+                "iDM OAuth login successful"
+            )
 
 
 
@@ -124,13 +113,12 @@ class IDMApi:
         self,
         endpoint: str,
     ):
-        """Perform API request."""
 
         session = await self._get_session()
 
 
         headers = {
-            "Authorization": f"Access-Token {self.token}",
+            "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
             "Origin": "https://app.myidm.at",
         }
@@ -150,19 +138,16 @@ class IDMApi:
 
 
     async def get_system_graph(self):
-        """Get system graph."""
 
         return await self._request(
-            f"/heatpumps/{self.installation}/diagrams/graph_system/?period=24h"
+            f"/v1/heatpumps/{self.installation}/diagrams/graph_system/?period=24h"
         )
 
 
 
     async def get_values(self):
-        """Get current values."""
 
         data = await self.get_system_graph()
-
 
         result = {}
 
@@ -180,7 +165,6 @@ class IDMApi:
 
 
         if not points:
-
             return result
 
 
@@ -193,7 +177,6 @@ class IDMApi:
                 str(channel)
             )
 
-
             if value is not None:
 
                 result[name] = value
@@ -204,7 +187,6 @@ class IDMApi:
 
 
     async def close(self):
-        """Close HTTP session."""
 
         if self.session:
 
