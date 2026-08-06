@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import aiohttp
 import logging
+
+import aiohttp
 
 from .const import API_URL
 
@@ -20,16 +21,15 @@ class IDMApi:
         password: str,
         installation: str,
     ) -> None:
-        """Initialize API."""
+        """Initialize API client."""
 
         self.username = username
         self.password = password
         self.installation = installation
-
         self.token = None
 
 
-    async def login(self):
+    async def login(self) -> None:
         """Login to iDM cloud."""
 
         async with aiohttp.ClientSession() as session:
@@ -47,8 +47,11 @@ class IDMApi:
 
                 data = await response.json()
 
-                self.token = data.get(
-                    "token"
+                self.token = data.get("token")
+
+                _LOGGER.warning(
+                    "iDM login response: %s",
+                    data,
                 )
 
                 if not self.token:
@@ -57,8 +60,7 @@ class IDMApi:
                     )
 
 
-
-    async def get_values(self):
+    async def get_values(self) -> dict:
         """Get all values from iDM."""
 
         if not self.token:
@@ -85,8 +87,8 @@ class IDMApi:
                 data = await response.json()
 
 
-                _LOGGER.debug(
-                    "iDM API response: %s",
+                _LOGGER.warning(
+                    "iDM API response TEST: %s",
                     data,
                 )
 
