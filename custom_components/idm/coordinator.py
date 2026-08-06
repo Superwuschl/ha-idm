@@ -1,7 +1,9 @@
-"""Data coordinator for iDM integration."""
+""""Data coordinator for iDM integration."""
 
-import logging
+from __future__ import annotations
+
 from datetime import timedelta
+import logging
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (
@@ -17,13 +19,13 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class IDMDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching iDM data."""
+    """Manage iDM data updates."""
 
     def __init__(
         self,
         hass: HomeAssistant,
         api: IDMApi,
-    ):
+    ) -> None:
         """Initialize coordinator."""
 
         self.api = api
@@ -37,7 +39,7 @@ class IDMDataUpdateCoordinator(DataUpdateCoordinator):
             ),
         )
 
-    async def _async_update_data(self):
+    async def _async_update_data(self) -> dict:
         """Fetch data from iDM."""
 
         try:
