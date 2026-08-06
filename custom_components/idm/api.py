@@ -1,19 +1,18 @@
-"""API client for the iDM myIDM cloud."""
+"""API client for iDM integration."""
 
 from __future__ import annotations
 
-import hashlib
+import aiohttp
 import logging
 
-import aiohttp
-
 from .const import API_URL
+
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class IDMApi:
-    """API client for iDM myIDM."""
+    """Client for iDM myIDM API."""
 
     def __init__(
         self,
@@ -23,30 +22,23 @@ class IDMApi:
     ) -> None:
         """Initialize API."""
 
-        self._username = username
-        self._password = password
-        self._installation = installation
+        self.username = username
+        self.password = password
+        self.installation = installation
 
-        self._token: str | None = None
+        self.token = None
 
-    async def login(self) -> None:
-        """Login to myIDM."""
 
-        password_hash = hashlib.sha1(
-            self._password.encode("utf-8")
-        ).hexdigest()
+    async def login(self):
+        """Login to iDM cloud."""
 
-        async with aiohttp.ClientSession(
-            headers={
-                "User-Agent": "IDM App (iOS)"
-            }
-        ) as session:
+        async with aiohttp.ClientSession() as session:
 
             async with session.post(
                 f"{API_URL}/api/user/login",
-                data={
-                    "username": self._username,
-                    "password": password_hash,
+                json={
+                    "username": self.username,
+                    "password": self.password,
                 },
                 ssl=False,
             ) as response:
@@ -55,34 +47,48 @@ class IDMApi:
 
                 data = await response.json()
 
-                token = data.get("token")
+                self.token = data.get(
+                    "token"
+                )
 
-                if not token:
-                    raise RuntimeError("Login failed")
+                if not self.token:
+                    raise Exception(
+                        "No API token received"
+                    )
 
-                self._token = token
 
-    async def get_values(self) -> dict:
-        """Return installation values."""
 
-        if self._token is None:
+    async def get_values(self):
+        """Get all values from iDM."""
+
+        if not self.token:
             await self.login()
 
-        async with aiohttp.ClientSession(
-            headers={
-                "User-Agent": "IDM App (iOS)"
-            }
-        ) as session:
 
-            async with session.post(
-                f"{API_URL}/api/installation/values",
-                data={
-                    "token": self._token,
-                    "installation": self._installation,
-                },
+        headers = {
+            "Authorization": (
+                f"Bearer {self.token}"
+            )
+        }
+
+
+        async with aiohttp.ClientSession() as session:
+
+            async with session.get(
+                f"{API_URL}/api/installation/{self.installation}",
+                headers=headers,
                 ssl=False,
             ) as response:
 
                 response.raise_for_status()
 
-                return await response.json()
+                data = await response.json()
+
+
+                _LOGGER.debug(
+                    "iDM API response: %s",
+                    data,
+                )
+
+
+                return data
