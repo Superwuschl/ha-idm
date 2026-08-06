@@ -114,8 +114,17 @@ class IDMApi:
         )
 
 
+
     def system_graph(self):
 
         return self.get(
             f"/api/v1/heatpumps/{self.wp_id}/diagrams/graph_system/?period=24h"
+        )
+
+
+
+    def heat_a_graph(self):
+
+        return self.get(
+            f"/api/v1/heatpumps/{self.wp_id}/diagrams/graph_heat_a/?period=24h"
         )
