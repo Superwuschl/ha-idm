@@ -21,7 +21,7 @@ class IDMApi:
         password: str,
         installation: str,
     ) -> None:
-        """Initialize API client."""
+        """Initialize API."""
 
         self.username = username
         self.password = password
@@ -29,49 +29,75 @@ class IDMApi:
         self.token = None
 
 
-    async def login(self) -> None:
-        """Login to iDM cloud."""
+    async def login(self):
+        """Login to iDM."""
+
+        urls = [
+            "/api/user/login",
+            "/api/auth/login",
+            "/api/login",
+            "/api/v1/login",
+        ]
 
         async with aiohttp.ClientSession() as session:
 
-            async with session.post(
-                f"{API_URL}/api/user/login",
-                json={
-                    "username": self.username,
-                    "password": self.password,
-                },
-                ssl=False,
-            ) as response:
+            for path in urls:
 
-                response.raise_for_status()
+                url = f"{API_URL}{path}"
 
-                data = await response.json()
+                try:
 
-                self.token = data.get("token")
+                    async with session.post(
+                        url,
+                        json={
+                            "username": self.username,
+                            "password": self.password,
+                        },
+                        ssl=False,
+                    ) as response:
 
-                _LOGGER.warning(
-                    "iDM login response: %s",
-                    data,
-                )
+                        text = await response.text()
 
-                if not self.token:
-                    raise Exception(
-                        "No API token received"
+                        _LOGGER.warning(
+                            "iDM login test %s -> %s: %s",
+                            path,
+                            response.status,
+                            text[:200],
+                        )
+
+                        if response.status == 200:
+
+                            data = await response.json()
+
+                            self.token = (
+                                data.get("token")
+                                or data.get("access_token")
+                            )
+
+                            if self.token:
+                                return
+
+                except Exception as err:
+
+                    _LOGGER.warning(
+                        "iDM login test failed %s: %s",
+                        path,
+                        err,
                     )
 
 
-    async def get_values(self) -> dict:
-        """Get all values from iDM."""
+        raise Exception(
+            "No valid iDM login endpoint found"
+        )
+
+
+    async def get_values(self):
+        """Get values from iDM."""
 
         if not self.token:
             await self.login()
 
-
-        headers = {
-            "Authorization": (
-                f"Bearer {self.token}"
-            )
-        }
+        return {}
 
 
         async with aiohttp.ClientSession() as session:
