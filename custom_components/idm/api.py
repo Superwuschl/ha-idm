@@ -20,50 +20,76 @@ class IDMApi:
         username: str,
         password: str,
         installation: str,
+        access_token: str,
     ) -> None:
-        """Initialize."""
+        """Initialize API client."""
 
         self.username = username
         self.password = password
         self.installation = installation
-
-        self.base_url = "https://a.myidm.at/api/v1"
         self.heatpump = installation
+        self.token = access_token
 
-        self.token = None
+        self.base_url = API_URL
         self.session = None
 
 
     async def login(self):
-        """Initialize API session."""
+        """Validate access token."""
 
-        self.session = aiohttp.ClientSession()
-
-        if self.token is None:
+        if not self.token:
             raise Exception(
                 "No iDM Access-Token available"
             )
 
+        self.session = aiohttp.ClientSession()
+
+        try:
+            await self._request(
+                "/users/current"
+            )
+
+            _LOGGER.debug(
+                "iDM API authentication successful"
+            )
+
+        except Exception:
+            await self.close()
+            raise
+
 
     async def close(self):
-        """Close session."""
+        """Close API session."""
 
         if self.session:
+
             await self.session.close()
 
+            self.session = None
 
-    async def _request(self, endpoint: str):
-        """Execute API request."""
+
+    async def _request(
+        self,
+        endpoint: str,
+    ):
+        """Send API request."""
 
         if self.session is None:
+
             self.session = aiohttp.ClientSession()
+
 
         headers = {
             "Authorization": f"Access-Token {self.token}",
             "Content-Type": "application/json",
+            "Origin": "https://app.myidm.at",
         }
 
-        url = f"{self.base_url}{endpoint}"
+
+        url = (
+            f"{self.base_url}{endpoint}"
+        )
+
 
         async with self.session.get(
             url,
@@ -77,7 +103,7 @@ class IDMApi:
 
 
     async def get_system_graph(self):
-        """Get system temperatures."""
+        """Get system diagram data."""
 
         return await self._request(
             f"/heatpumps/{self.heatpump}/diagrams/graph_system/?period=24h"
@@ -85,11 +111,13 @@ class IDMApi:
 
 
     async def get_values(self):
-        """Return current values."""
+        """Return latest heatpump values."""
 
         data = await self.get_system_graph()
 
+
         result = {}
+
 
         labels = data.get(
             "channel_labels",
@@ -100,6 +128,7 @@ class IDMApi:
             "data",
             [],
         )
+
 
         if not points:
             return result
