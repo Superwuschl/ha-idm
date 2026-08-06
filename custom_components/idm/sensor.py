@@ -38,7 +38,7 @@ CHANNELS = {
 }
 
 
-HEAT_CIRCUIT_A_CHANNELS = {
+HEAT_A_CHANNELS = {
     "9": (
         "Heizkreis A Vorlauf",
         "°C",
@@ -48,11 +48,11 @@ HEAT_CIRCUIT_A_CHANNELS = {
         "°C",
     ),
     "16": (
-        "Raumtemperatur",
+        "Heizkreis A Raumtemperatur",
         "°C",
     ),
     "106": (
-        "Soll Raumtemperatur",
+        "Heizkreis A Soll Raumtemperatur",
         "°C",
     ),
 }
@@ -69,6 +69,7 @@ DEVICE_INFO = {
 }
 
 
+
 async def async_setup_entry(
     hass,
     config_entry,
@@ -81,7 +82,7 @@ async def async_setup_entry(
 
 
     #
-    # Systemtemperaturen
+    # System Temperaturen
     #
 
     graph = coordinator.data.get(
@@ -136,7 +137,7 @@ async def async_setup_entry(
         latest_heat_a = heat_a_data[-1]
 
 
-    for channel, values in HEAT_CIRCUIT_A_CHANNELS.items():
+    for channel, values in HEAT_A_CHANNELS.items():
 
         if channel not in latest_heat_a:
             continue
@@ -153,7 +154,7 @@ async def async_setup_entry(
 
 
     #
-    # Infos
+    # Info Sensoren
     #
 
     entities.extend(
@@ -205,7 +206,7 @@ class IDMTemperatureSensor(
         self.source = source
 
         self._attr_unique_id = (
-            f"idm_3419_{source}_{channel}"
+            f"idm_3419_{source}_temperature_{channel}"
         )
 
         self._attr_name = (
@@ -225,26 +226,15 @@ class IDMTemperatureSensor(
     @property
     def native_value(self):
 
-        if self.source == "heat_a":
+        data_source = self.coordinator.data.get(
+            self.source,
+            {}
+        )
 
-            graph = self.coordinator.data.get(
-                "heat_a",
-                {}
-            )
-
-        else:
-
-            graph = self.coordinator.data.get(
-                "graph",
-                {}
-            )
-
-
-        data = graph.get(
+        data = data_source.get(
             "data",
             []
         )
-
 
         if not data:
             return None
@@ -299,11 +289,9 @@ class IDMInfoSensor(
     @property
     def native_value(self):
 
-        heatpump = (
-            self.coordinator.data.get(
-                "heatpump",
-                {}
-            )
+        heatpump = self.coordinator.data.get(
+            "heatpump",
+            {}
         )
 
         return heatpump.get(
