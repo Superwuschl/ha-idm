@@ -32,6 +32,7 @@ class IDMApi:
 
 
     async def _get_session(self):
+        """Get aiohttp session."""
 
         if self.session is None:
             self.session = aiohttp.ClientSession()
@@ -40,13 +41,13 @@ class IDMApi:
 
 
     async def login(self):
-        """Login using OAuth2."""
+        """Login using iDM OAuth2."""
 
         session = await self._get_session()
 
 
         url = (
-            f"{API_URL}/oauth2/token/"
+            f"{API_URL}/api/v1/oauth2/token/"
         )
 
 
@@ -69,11 +70,11 @@ class IDMApi:
             ssl=False,
         ) as response:
 
-
             try:
                 data = await response.json()
 
             except Exception:
+
                 data = await response.text()
 
 
@@ -113,6 +114,7 @@ class IDMApi:
         self,
         endpoint: str,
     ):
+        """Send authenticated request."""
 
         session = await self._get_session()
 
@@ -124,12 +126,16 @@ class IDMApi:
         }
 
 
+        url = (
+            f"{API_URL}/api/v1{endpoint}"
+        )
+
+
         async with session.get(
-            f"{API_URL}{endpoint}",
+            url,
             headers=headers,
             ssl=False,
         ) as response:
-
 
             response.raise_for_status()
 
@@ -138,16 +144,19 @@ class IDMApi:
 
 
     async def get_system_graph(self):
+        """Get system temperature graph."""
 
         return await self._request(
-            f"/v1/heatpumps/{self.installation}/diagrams/graph_system/?period=24h"
+            f"/heatpumps/{self.installation}/diagrams/graph_system/?period=24h"
         )
 
 
 
     async def get_values(self):
+        """Get current values."""
 
         data = await self.get_system_graph()
+
 
         result = {}
 
@@ -165,6 +174,7 @@ class IDMApi:
 
 
         if not points:
+
             return result
 
 
@@ -177,6 +187,7 @@ class IDMApi:
                 str(channel)
             )
 
+
             if value is not None:
 
                 result[name] = value
@@ -187,6 +198,7 @@ class IDMApi:
 
 
     async def close(self):
+        """Close HTTP session."""
 
         if self.session:
 
