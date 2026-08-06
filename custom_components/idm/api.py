@@ -28,11 +28,24 @@ class IDMApi:
         self.installation = installation
 
         self.token = None
-        self.session = aiohttp.ClientSession()
+        self.session = None
+
+
+    async def _get_session(self):
+        """Return HTTP session."""
+
+        if self.session is None:
+
+            self.session = aiohttp.ClientSession()
+
+        return self.session
 
 
     async def login(self):
         """Get OAuth2 access token."""
+
+        session = await self._get_session()
+
 
         url = (
             f"{API_URL}/oauth2/token/"
@@ -51,38 +64,49 @@ class IDMApi:
         }
 
 
-        async with self.session.post(
-            url,
-            json=payload,
-            headers=headers,
-            ssl=False,
-        ) as response:
+        try:
 
-            data = await response.json()
+            async with session.post(
+                url,
+                json=payload,
+                headers=headers,
+                ssl=False,
+            ) as response:
 
 
-            if response.status != 200:
+                data = await response.json()
 
-                raise Exception(
-                    f"iDM OAuth login failed: {response.status} {data}"
+
+                if response.status != 200:
+
+                    raise Exception(
+                        f"OAuth login failed {response.status}: {data}"
+                    )
+
+
+                self.token = data.get(
+                    "access_token"
                 )
 
 
-            self.token = data.get(
-                "access_token"
-            )
+                if not self.token:
+
+                    raise Exception(
+                        "No access_token returned"
+                    )
 
 
-            if not self.token:
-
-                raise Exception(
-                    "No access_token returned"
+                _LOGGER.debug(
+                    "iDM OAuth login successful"
                 )
 
 
-            _LOGGER.debug(
-                "iDM OAuth login successful"
-            )
+        except Exception:
+
+            await self.close()
+
+            raise
+
 
 
     async def _request(
@@ -90,13 +114,16 @@ class IDMApi:
         endpoint: str,
     ):
 
+        session = await self._get_session()
+
+
         headers = {
             "Authorization": f"Access-Token {self.token}",
             "Content-Type": "application/json",
         }
 
 
-        async with self.session.get(
+        async with session.get(
             f"{API_URL}{endpoint}",
             headers=headers,
             ssl=False,
@@ -107,16 +134,21 @@ class IDMApi:
             return await response.json()
 
 
+
     async def get_system_graph(self):
+        """Get system diagram."""
 
         return await self._request(
             f"/heatpumps/{self.installation}/diagrams/graph_system/?period=24h"
         )
 
 
+
     async def get_values(self):
+        """Get current values."""
 
         data = await self.get_system_graph()
+
 
         result = {}
 
@@ -133,6 +165,7 @@ class IDMApi:
 
 
         if not points:
+
             return result
 
 
@@ -145,6 +178,7 @@ class IDMApi:
                 str(channel)
             )
 
+
             if value is not None:
 
                 result[name] = value
@@ -153,6 +187,12 @@ class IDMApi:
         return result
 
 
-    async def close(self):
 
-        await self.session.close()
+    async def close(self):
+        """Close HTTP session."""
+
+        if self.session:
+
+            await self.session.close()
+
+            self.session = None
