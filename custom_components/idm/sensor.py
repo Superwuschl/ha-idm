@@ -22,7 +22,6 @@ async def async_setup_entry(
     entities = []
 
     for description in SENSOR_DESCRIPTIONS:
-
         entities.append(
             IDMSensor(
                 coordinator,
@@ -33,13 +32,11 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-
 class IDMSensor(IDMEntity, SensorEntity):
     """Representation of an iDM sensor."""
 
     _attr_has_entity_name = True
     _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-
 
     def __init__(
         self,
@@ -53,7 +50,7 @@ class IDMSensor(IDMEntity, SensorEntity):
             description.key,
         )
 
-        self.entity_description = description
+        self._description = description
 
         self._attr_name = description.name
 
@@ -62,8 +59,6 @@ class IDMSensor(IDMEntity, SensorEntity):
         )
 
         self._attr_icon = description.icon
-
-
 
     @property
     def native_value(self):
@@ -74,39 +69,30 @@ class IDMSensor(IDMEntity, SensorEntity):
         for part in self._key.split("."):
 
             if isinstance(value, list):
-
                 value = value[int(part)]
 
             elif isinstance(value, dict):
-
                 value = value.get(part)
 
             else:
-
                 value = None
                 break
-
 
         if value is None:
             return None
 
-
         if isinstance(value, str):
-
             value = (
                 value
                 .replace("°C", "")
                 .strip()
             )
 
-
         try:
-
             return float(value)
 
         except (
             ValueError,
             TypeError,
         ):
-
             return value

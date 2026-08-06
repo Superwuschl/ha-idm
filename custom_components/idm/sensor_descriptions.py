@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from homeassistant.components.sensor import SensorDeviceClass
+
 
 @dataclass(frozen=True)
 class IDMSensorDescription:
@@ -12,6 +14,7 @@ class IDMSensorDescription:
     name: str
     key: str
     icon: str
+    device_class: str = SensorDeviceClass.TEMPERATURE
 
 
 SENSOR_DESCRIPTIONS = (
