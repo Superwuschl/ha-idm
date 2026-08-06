@@ -18,6 +18,7 @@ class IDMConfigFlow(
 
     VERSION = 1
 
+
     async def async_step_user(
         self,
         user_input=None,
@@ -26,38 +27,48 @@ class IDMConfigFlow(
 
         errors = {}
 
+
         if user_input is not None:
+
+            api = IDMApi(
+                username=user_input["username"],
+                password=user_input["password"],
+                installation=user_input["installation"],
+            )
+
 
             try:
 
-                api = IDMApi(
-                    username=user_input["username"],
-                    password=user_input["password"],
-                    installation=user_input["installation"],
-                )
-
                 await api.login()
-
-                await api.close()
 
 
             except Exception as err:
 
                 errors["base"] = "cannot_connect"
 
-
             else:
+
+                await api.close()
+
 
                 await self.async_set_unique_id(
                     f"idm_{user_input['installation']}"
                 )
 
+
                 self._abort_if_unique_id_configured()
+
 
                 return self.async_create_entry(
                     title="iDM myIDM",
                     data=user_input,
                 )
+
+
+            finally:
+
+                await api.close()
+
 
 
         schema = vol.Schema(
@@ -66,9 +77,11 @@ class IDMConfigFlow(
                     "username"
                 ): str,
 
+
                 vol.Required(
                     "password"
                 ): str,
+
 
                 vol.Required(
                     "installation"
