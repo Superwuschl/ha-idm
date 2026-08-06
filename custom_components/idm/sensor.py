@@ -226,15 +226,26 @@ class IDMTemperatureSensor(
     @property
     def native_value(self):
 
-        data_source = self.coordinator.data.get(
-            self.source,
-            {}
-        )
+        if self.source == "system":
+
+            data_source = self.coordinator.data.get(
+                "graph",
+                {}
+            )
+
+        else:
+
+            data_source = self.coordinator.data.get(
+                self.source,
+                {}
+            )
+
 
         data = data_source.get(
             "data",
             []
         )
+
 
         if not data:
             return None
