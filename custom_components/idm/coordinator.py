@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
@@ -28,7 +29,7 @@ class IDMCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name="iDM TERRA S",
-            update_interval=300,
+            update_interval=timedelta(seconds=300),
         )
 
 
