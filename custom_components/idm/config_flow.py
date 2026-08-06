@@ -6,6 +6,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 
+from .api import IDMApi
 from .const import DOMAIN
 
 
@@ -17,6 +18,7 @@ class IDMConfigFlow(
 
     VERSION = 1
 
+
     async def async_step_user(
         self,
         user_input=None,
@@ -25,13 +27,42 @@ class IDMConfigFlow(
 
         errors = {}
 
+
         if user_input is not None:
+
+            try:
+
+                api = IDMApi(
+                    username=user_input["username"],
+                    password=user_input["password"],
+                    installation=user_input["installation"],
+                    access_token=user_input["access_token"],
+                )
+
+
+                await api.login()
+
+                await api.close()
+
+
+            except Exception as err:
+
+                errors["base"] = "cannot_connect"
+
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=self._get_schema(),
+                    errors=errors,
+                )
+
 
             await self.async_set_unique_id(
                 f"idm_{user_input['installation']}"
             )
 
+
             self._abort_if_unique_id_configured()
+
 
             return self.async_create_entry(
                 title="iDM myIDM",
@@ -39,7 +70,17 @@ class IDMConfigFlow(
             )
 
 
-        schema = vol.Schema(
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self._get_schema(),
+            errors=errors,
+        )
+
+
+    def _get_schema(self):
+        """Return config schema."""
+
+        return vol.Schema(
             {
                 vol.Required(
                     "username"
@@ -57,10 +98,4 @@ class IDMConfigFlow(
                     "access_token"
                 ): str,
             }
-        )
-
-        return self.async_show_form(
-            step_id="user",
-            data_schema=schema,
-            errors=errors,
         )
