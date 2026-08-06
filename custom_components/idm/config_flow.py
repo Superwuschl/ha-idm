@@ -5,9 +5,7 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import callback
 
-from .api import IDMApi
 from .const import DOMAIN
 
 
@@ -29,30 +27,17 @@ class IDMConfigFlow(
 
         if user_input is not None:
 
-            try:
-                api = IDMApi(
-                    username=user_input["username"],
-                    password=user_input["password"],
-                    installation=user_input["installation"],
-                )
+            await self.async_set_unique_id(
+                f"idm_{user_input['installation']}"
+            )
 
-                await api.login()
+            self._abort_if_unique_id_configured()
 
-            except Exception:
-                errors["base"] = "cannot_connect"
+            return self.async_create_entry(
+                title="iDM myIDM",
+                data=user_input,
+            )
 
-            else:
-
-                await self.async_set_unique_id(
-                    f"idm_{user_input['installation']}"
-                )
-
-                self._abort_if_unique_id_configured()
-
-                return self.async_create_entry(
-                    title="iDM myIDM",
-                    data=user_input,
-                )
 
         schema = vol.Schema(
             {
@@ -66,6 +51,10 @@ class IDMConfigFlow(
 
                 vol.Required(
                     "installation"
+                ): str,
+
+                vol.Required(
+                    "access_token"
                 ): str,
             }
         )
