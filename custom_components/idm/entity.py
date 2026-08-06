@@ -1,15 +1,25 @@
-"""Base entity for iDM."""
+"""Base entity for iDM integration."""
+
+from __future__ import annotations
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    MANUFACTURER,
+    DEVICE_IDENTIFIER,
+)
 
 
 class IDMEntity(CoordinatorEntity):
-    """Base iDM entity."""
+    """Base class for iDM entities."""
 
-    def __init__(self, coordinator, key):
-        """Initialize."""
+    def __init__(
+        self,
+        coordinator,
+        key: str,
+    ) -> None:
+        """Initialize entity."""
 
         super().__init__(coordinator)
 
@@ -20,12 +30,10 @@ class IDMEntity(CoordinatorEntity):
         """Return device information."""
 
         return {
-            "identifiers": {(DOMAIN, "main")},
-            "manufacturer": "iDM",
+            "identifiers": {
+                (DOMAIN, DEVICE_IDENTIFIER)
+            },
             "name": "iDM Wärmepumpe",
+            "manufacturer": MANUFACTURER,
             "model": "myIDM",
         }
-
-    @property
-    def available(self):
-        return self.coordinator.last_update_success
