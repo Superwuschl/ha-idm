@@ -35,7 +35,6 @@ class IDMApi:
         """Return HTTP session."""
 
         if self.session is None:
-
             self.session = aiohttp.ClientSession()
 
         return self.session
@@ -45,7 +44,6 @@ class IDMApi:
         """Get OAuth2 access token."""
 
         session = await self._get_session()
-
 
         url = (
             f"{API_URL}/oauth2/token/"
@@ -74,7 +72,20 @@ class IDMApi:
             ) as response:
 
 
-                data = await response.json()
+                try:
+
+                    data = await response.json()
+
+                except Exception:
+
+                    data = await response.text()
+
+
+                _LOGGER.error(
+                    "iDM OAuth response %s: %s",
+                    response.status,
+                    data,
+                )
 
 
                 if response.status != 200:
@@ -96,7 +107,7 @@ class IDMApi:
                     )
 
 
-                _LOGGER.debug(
+                _LOGGER.info(
                     "iDM OAuth login successful"
                 )
 
@@ -113,6 +124,7 @@ class IDMApi:
         self,
         endpoint: str,
     ):
+        """Perform API request."""
 
         session = await self._get_session()
 
@@ -120,6 +132,7 @@ class IDMApi:
         headers = {
             "Authorization": f"Access-Token {self.token}",
             "Content-Type": "application/json",
+            "Origin": "https://app.myidm.at",
         }
 
 
@@ -129,6 +142,7 @@ class IDMApi:
             ssl=False,
         ) as response:
 
+
             response.raise_for_status()
 
             return await response.json()
@@ -136,7 +150,7 @@ class IDMApi:
 
 
     async def get_system_graph(self):
-        """Get system diagram."""
+        """Get system graph."""
 
         return await self._request(
             f"/heatpumps/{self.installation}/diagrams/graph_system/?period=24h"
@@ -157,6 +171,7 @@ class IDMApi:
             "channel_labels",
             {},
         )
+
 
         points = data.get(
             "data",
