@@ -12,7 +12,7 @@ MANUFACTURER = "iDM"
 MODEL = "myIDM"
 
 
-API_URL = "https://www.myidm.at"
+API_URL = "https://a.myidm.at"
 
 
 DEFAULT_SCAN_INTERVAL = 60
