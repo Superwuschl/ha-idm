@@ -20,79 +20,84 @@ class IDMApi:
         username: str,
         password: str,
         installation: str,
-        access_token: str,
     ) -> None:
-        """Initialize API client."""
+        """Initialize."""
 
         self.username = username
         self.password = password
         self.installation = installation
-        self.heatpump = installation
-        self.token = access_token
 
-        self.base_url = API_URL
-        self.session = None
+        self.token = None
+        self.session = aiohttp.ClientSession()
 
 
     async def login(self):
-        """Validate access token."""
+        """Get OAuth2 access token."""
 
-        if not self.token:
-            raise Exception(
-                "No iDM Access-Token available"
+        url = (
+            f"{API_URL}/oauth2/token/"
+        )
+
+
+        payload = {
+            "username": self.username,
+            "password": self.password,
+            "grant_type": "password",
+        }
+
+
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+
+        async with self.session.post(
+            url,
+            json=payload,
+            headers=headers,
+            ssl=False,
+        ) as response:
+
+            data = await response.json()
+
+
+            if response.status != 200:
+
+                raise Exception(
+                    f"iDM OAuth login failed: {response.status} {data}"
+                )
+
+
+            self.token = data.get(
+                "access_token"
             )
 
-        self.session = aiohttp.ClientSession()
 
-        try:
-            await self._request(
-                "/users/current"
-            )
+            if not self.token:
+
+                raise Exception(
+                    "No access_token returned"
+                )
+
 
             _LOGGER.debug(
-                "iDM API authentication successful"
+                "iDM OAuth login successful"
             )
-
-        except Exception:
-            await self.close()
-            raise
-
-
-    async def close(self):
-        """Close API session."""
-
-        if self.session:
-
-            await self.session.close()
-
-            self.session = None
 
 
     async def _request(
         self,
         endpoint: str,
     ):
-        """Send API request."""
-
-        if self.session is None:
-
-            self.session = aiohttp.ClientSession()
-
 
         headers = {
             "Authorization": f"Access-Token {self.token}",
             "Content-Type": "application/json",
-            "Origin": "https://app.myidm.at",
         }
 
 
-        url = (
-            f"{self.base_url}{endpoint}"
-        )
-
-
         async with self.session.get(
-            url,
+            f"{API_URL}{endpoint}",
             headers=headers,
             ssl=False,
         ) as response:
@@ -103,18 +108,15 @@ class IDMApi:
 
 
     async def get_system_graph(self):
-        """Get system diagram data."""
 
         return await self._request(
-            f"/heatpumps/{self.heatpump}/diagrams/graph_system/?period=24h"
+            f"/heatpumps/{self.installation}/diagrams/graph_system/?period=24h"
         )
 
 
     async def get_values(self):
-        """Return latest heatpump values."""
 
         data = await self.get_system_graph()
-
 
         result = {}
 
@@ -149,3 +151,8 @@ class IDMApi:
 
 
         return result
+
+
+    async def close(self):
+
+        await self.session.close()
