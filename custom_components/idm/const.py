@@ -12,11 +12,7 @@ MANUFACTURER = "iDM"
 MODEL = "myIDM"
 
 
-# iDM API
-#
-# Diese URL ist der API-Basis-Endpunkt.
-# Der genaue Pfad wird in api.py ergänzt.
-API_URL = "https://myidm.at"
+API_URL = "https://www.myidm.at"
 
 
 DEFAULT_SCAN_INTERVAL = 60
