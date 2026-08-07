@@ -42,6 +42,15 @@ class IDMCoordinator(DataUpdateCoordinator):
         try:
             data["heatpump"] = await self.api.heatpump()
 
+            hp = data["heatpump"]
+
+            _LOGGER.info(
+                "iDM Status: Modell=%s ID=%s Online=%s",
+                hp.get("wp_type"),
+                hp.get("wp_id"),
+                hp.get("online"),
+            )
+
         except Exception as err:
             _LOGGER.error(
                 "iDM heatpump API Fehler: %s",

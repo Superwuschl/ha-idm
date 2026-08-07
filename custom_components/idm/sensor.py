@@ -3,6 +3,7 @@ from __future__ import annotations
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorDeviceClass,
+    SensorStateClass,
 )
 
 from homeassistant.helpers.update_coordinator import (
@@ -60,6 +61,18 @@ HEAT_A_SENSORS = {
 }
 
 
+HEAT_A_INFO = {
+    "123": (
+        "idm_heizkreis_a_aktiv",
+        "Heizkreis A aktiv",
+    ),
+    "130": (
+        "idm_heizkreis_a_modus",
+        "Heizkreis A Modus",
+    ),
+}
+
+
 async def async_setup_entry(
     hass,
     config_entry,
@@ -97,32 +110,35 @@ async def async_setup_entry(
         )
 
 
+    for channel, values in HEAT_A_INFO.items():
+
+        entities.append(
+            IDMGraphSensor(
+                coordinator,
+                "heat_a",
+                channel,
+                values[0],
+                values[1],
+                False,
+            )
+        )
+
+
     entities.extend(
         [
-            IDMInfoSensor(
-                coordinator,
-                "online",
-                "Online",
-            ),
-
-            IDMInfoSensor(
-                coordinator,
-                "wp_type",
-                "Modell",
-            ),
-
-            IDMInfoSensor(
-                coordinator,
-                "nav_version",
-                "Navigator Version",
-            ),
+            IDMInfoSensor(coordinator, "online", "Online"),
+            IDMInfoSensor(coordinator, "wp_type", "Modell"),
+            IDMInfoSensor(coordinator, "nav_version", "Navigator Version"),
+            IDMInfoSensor(coordinator, "serialnumber", "Seriennummer"),
+            IDMInfoSensor(coordinator, "wp_id", "Wärmepumpe ID"),
+            IDMInfoSensor(coordinator, "myidm_id", "myIDM ID"),
+            IDMInfoSensor(coordinator, "last_online", "Letzte Verbindung"),
+            IDMInfoSensor(coordinator, "logfreq", "Log Intervall"),
         ]
     )
 
 
-    async_add_entities(
-        entities
-    )
+    async_add_entities(entities)
 
 
 
@@ -138,25 +154,27 @@ class IDMGraphSensor(
         channel,
         unique_id,
         name,
+        temperature=True,
     ):
 
-        super().__init__(
-            coordinator
-        )
+        super().__init__(coordinator)
 
         self.source = source
         self.channel = channel
 
         self._attr_unique_id = unique_id
         self._attr_name = name
-
         self._attr_device_info = DEVICE_INFO
 
-        self._attr_native_unit_of_measurement = "°C"
+        if temperature:
 
-        self._attr_device_class = (
-            SensorDeviceClass.TEMPERATURE
-        )
+            self._attr_native_unit_of_measurement = "°C"
+            self._attr_device_class = (
+                SensorDeviceClass.TEMPERATURE
+            )
+            self._attr_state_class = (
+                SensorStateClass.MEASUREMENT
+            )
 
 
     @property
@@ -172,7 +190,6 @@ class IDMGraphSensor(
             []
         )
 
-
         if not data:
             return None
 
@@ -186,10 +203,41 @@ class IDMGraphSensor(
             return None
 
 
-        return round(
-            value,
-            1
+        if isinstance(value, float):
+
+            return round(value, 1)
+
+
+        return value
+
+
+
+    @property
+    def extra_state_attributes(self):
+
+        graph = self.coordinator.data.get(
+            self.source,
+            {}
         )
+
+        data = graph.get(
+            "data",
+            []
+        )
+
+        if not data:
+            return {}
+
+
+        last = data[-1]
+
+        return {
+            "quelle": self.source,
+            "kanal": self.channel,
+            "zeitpunkt": last.get("datetime"),
+            "diagramm": graph.get("diagram"),
+            "periode": graph.get("period"),
+        }
 
 
 
@@ -205,9 +253,7 @@ class IDMInfoSensor(
         name,
     ):
 
-        super().__init__(
-            coordinator
-        )
+        super().__init__(coordinator)
 
         self.key = key
 
@@ -218,6 +264,7 @@ class IDMInfoSensor(
         self._attr_name = name
 
         self._attr_device_info = DEVICE_INFO
+
 
 
     @property

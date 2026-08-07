@@ -4,9 +4,6 @@
   "version": "1.0.0",
   "documentation": "https://www.idm-energie.at",
   "config_flow": true,
-  "requirements": [
-    "requests>=2.31.0"
-  ],
   "dependencies": [],
   "codeowners": []
 }
